@@ -1,8 +1,12 @@
 import pandas as pd
 import numpy as np
-import math
+from sklearn import datasets
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
+from tqdm import tqdm
 
-#算法实现
+#KNN算法实现
 class KNearestNeighbor(object):
     def __init__(self) :
         pass
@@ -30,71 +34,74 @@ class KNearestNeighbor(object):
 
         return y_pred
 
+# 加载数据集
+def load_datasets():
+    iris = datasets.load_iris()
+    wine = datasets.load_wine()
+    zoo_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
+    zoo_data = pd.read_csv(zoo_url, header=None)
+    zoo = {
+        'data': zoo_data.iloc[:, 1:-1].values,
+        'target': zoo_data.iloc[:, -1].values - 1,  # 将标签从1开始的类别转换为从0开始
+        'target_names': np.unique(zoo_data.iloc[:, -1])
+    }
 
+    glass_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/glass/glass.data"
+    column_names = [
+    "Id", "RI", "Na", "Mg", "Al", "Si", "K", "Ca", "Ba", "Fe", "Type"
+    ]
+    glass_data = pd.read_csv(glass_url,names=column_names)
+    glass = {
+        'data' : glass_data.iloc[:,1:-1].values,
+        'target':glass_data.iloc[:, -1].values - 1,  # 将标签从1开始的类别转换为从0开始
+        'target_names': np.unique(glass_data.iloc[:, -1])
+    }
+    return iris, wine, zoo,glass
 
-# 数据集文件列表
-dataset =pd.read_excel('iri.xls')
-dataset.columns = ['A', 'B', 'C', 'D', 'judgesort'] 
+# 预处理数据
+def preprocess_data(data):
+    scaler = StandardScaler()
+    X = scaler.fit_transform(data['data'])
+    y = data['target']
+    return X, y
 
+# 交叉验证函数
+def cross_validation(model, X, y, k=3, n_splits=10, n_repeats=10):
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    accuracies = []
 
-#数据预处理
-X = dataset.iloc[0:150,0:4].values
-y = dataset.iloc[0:150,4].values
+    total_iterations = n_splits * n_repeats
+    with tqdm(total=total_iterations, desc="Cross-validation progress") as pbar:
+        for _ in range(n_repeats):
+            for train_index, test_index in kf.split(X):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
 
-#print(X)
-#print(y)
+                model.train(X_train, y_train)
+                y_pred = model.predict(X_test, k=k)
+                accuracy = accuracy_score(y_test, y_pred)
+                accuracies.append(accuracy)
+                
+                pbar.update(1)
 
-X_firstspicy,y_firstspicy = X[0:50],y[0:50]
-X_secendspicy,y_secendspicy = X[50:100],y[50:100]
-X_thirdspicy,y_thirdspicy = X[100:150],y[100:150]
+    return np.mean(accuracies), np.std(accuracies)
 
-'''
-    此部分利用将数据集拆分成训练集、验证集、测试集
-    其中比例分别为60%,10%,10%
-'''
-#Training set
-X_firstspicy_train = X_firstspicy[:30, : ]
-y_firstspicy_train = y_firstspicy[:30]
-X_secendspicy_train = X_secendspicy[:30, : ]
-y_secendspicy_train = y_secendspicy[:30]
-X_thirdspicy_train = X_thirdspicy[:30,  : ]
-y_thirdspicy_train = y_thirdspicy[:30]
+# 主函数
+def main():
+    iris, wine, zoo, glass = load_datasets()
 
-X_train = np.vstack([X_firstspicy_train,X_secendspicy_train,X_thirdspicy_train])
-y_train = np.hstack([y_firstspicy_train,y_secendspicy_train,y_thirdspicy_train])
+    datasets_list = [iris, wine, zoo,glass]
+    dataset_names = ["Iris", "Wine", "Zoo","Glasss"]
 
-#validation set 验证集
-X_firstspicy_val = X_firstspicy[30:40, : ]
-y_firstspicy_val = y_firstspicy[30:40]
-X_secendspicy_val = X_secendspicy[30:40, : ]
-y_secendspicy_val = y_secendspicy[30:40]
-X_thirdspicy_val = X_thirdspicy[30:40, : ]
-y_thirdspicy_val = y_thirdspicy[30:40]
+    for data, name in zip(datasets_list, dataset_names):
+        X, y = preprocess_data(data)
 
-X_val = np.vstack([X_firstspicy_val,X_secendspicy_val,X_thirdspicy_val])
-y_val = np.hstack([y_firstspicy_val,y_secendspicy_val,y_thirdspicy_val])
+        knn = KNearestNeighbor()
+        mean_accuracy, std_accuracy = cross_validation(knn, X, y, k=3, n_splits=10, n_repeats=10)
 
-#testing set 测试集
-X_firstspicy_test = X_firstspicy[40:50, : ]
-y_firstspicy_test = y_firstspicy[40:50]
-X_secendspicy_test = X_secendspicy[40:50, : ]
-y_secendspicy_test = y_secendspicy[40:50]
-X_thirdspicy_test = X_thirdspicy[40:50, : ]
-y_thirdspicy_test = y_thirdspicy[40:50]
+        print(f"Dataset: {name}")
+        print(f"Mean Accuracy: {mean_accuracy:.2f}")
+        print(f"Standard Deviation: {std_accuracy:.2f}")
 
-X_test = np.vstack([X_firstspicy_test,X_secendspicy_test,X_thirdspicy_test])
-y_test = np.hstack([y_firstspicy_test,y_secendspicy_test,y_thirdspicy_test])
-
-
-KNN = KNearestNeighbor()
-KNN.train(X_train, y_train)
-for k in range(1, 20):
-    y_pred = KNN.predict(X_val, k)
-    accuracy = np.mean(y_pred == y_val)
-    print('k={} , 正确率：{}'.format(k,accuracy))
-
-KNN = KNearestNeighbor()
-KNN.train(X_train, y_train)
-y_pred = KNN.predict(X_test, k=20)
-accuracy = np.mean(y_pred == y_test)
-print('测试集预测准确率：%f' % accuracy)
+if __name__ == "__main__":
+    main()

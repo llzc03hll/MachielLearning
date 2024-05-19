@@ -121,23 +121,8 @@ class BPNeualNetwork:
 
 
 
-
-# 加载Iris数据集
-iris = load_iris()
-X_iris = iris.data
-y_iris = iris.target
-
-# 对标签进行OneHot编码
-encoder = OneHotEncoder(sparse_output=False)
-y_iris_encoded = encoder.fit_transform(y_iris.reshape(-1, 1))
-
-# 对数据进行标准化
-scaler = StandardScaler()
-X_iris = scaler.fit_transform(X_iris)
-
 # 10折交叉验证
 kf = KFold(n_splits=10, shuffle=True, random_state=42)
-
 
 
 def train_and_evaluate(X,y):
@@ -169,6 +154,19 @@ def train_and_evaluate(X,y):
         accuracy = accuracy_score(y_test_original, predictions)
         accuracies.append(accuracy)
     return sum(accuracies) / len(accuracies)
+
+# 加载Iris数据集
+iris = load_iris()
+X_iris = iris.data
+y_iris = iris.target
+
+# 对标签进行OneHot编码
+encoder = OneHotEncoder(sparse_output=False)
+y_iris_encoded = encoder.fit_transform(y_iris.reshape(-1, 1))
+
+# 对数据进行标准化
+scaler = StandardScaler()
+X_iris = scaler.fit_transform(X_iris)
 
 # 评估在Iris数据集上的表现
 iris_accuracy = train_and_evaluate(X_iris, y_iris_encoded)
@@ -203,3 +201,49 @@ X_zoo = scaler.fit_transform(X_zoo)
 # 评估在Zoo数据集上的表现
 zoo_accuracy = train_and_evaluate(X_zoo, y_zoo_encoded)
 print("Zoo数据集上的平均准确率:", zoo_accuracy)
+
+# 加载wine数据集
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
+column_names = [
+    "Class", "Alcohol", "Malic_acid", "Ash", "Alcalinity_of_ash", "Magnesium", 
+    "Total_phenols", "Flavanoids", "Nonflavanoid_phenols", "Proanthocyanins", 
+    "Color_intensity", "Hue", "OD280_OD315_of_diluted_wines", "Proline"
+]
+wine_data = pd.read_csv(url,names=column_names)
+
+# 特征和标签
+X_wine = wine_data.drop("Class", axis=1).values
+y_wine = wine_data["Class"].values
+
+# 对标签进行OneHot编码
+encoder = OneHotEncoder(sparse_output = False)
+y_wine_encoded = encoder.fit_transform(y_wine.reshape(-1,1))
+
+# 对数据进行标准化
+scaler = StandardScaler()
+X_wine = scaler.fit_transform(X_wine)
+
+# 评估在wine数据集上面的表现
+wine_accuracy = train_and_evaluate(X_wine,y_wine_encoded)
+print("Wine数据集上的平均准确率:", wine_accuracy)
+
+# 加载glass数据集
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/glass/glass.data"
+column_names = [
+    "Id", "RI", "Na", "Mg", "Al", "Si", "K", "Ca", "Ba", "Fe", "Type"
+]
+glass_data = pd.read_csv(url,names=column_names)
+
+# 特征和标签
+X_glass = glass_data.drop("Type",axis=1).values
+y_glass = glass_data["Type"].values
+
+# 对标签进行OneHot编码
+encoder = OneHotEncoder(sparse_output = False)
+y_glass_encoded = encoder.fit_transform(y_glass.reshape(-1,1))
+
+# 对数据标准化
+X_glass = scaler.fit_transform(X_glass)
+# 评估在glass数据集上面的表现
+glass_accuracy = train_and_evaluate(X_glass,y_glass_encoded)
+print("Glass数据集上的平均准确率:", glass_accuracy)
